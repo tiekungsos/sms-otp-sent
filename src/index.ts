@@ -177,28 +177,28 @@ app.post("/send-otp-normal", async (req: Request, res: Response) => {
     res.status(400).json({ error: "Not found data" });
     return;
   }
-
-  let data : any = decryptData(req.body.data);
-  const {
-    tel,
-    message
-  } = data
-
-
-  if (!tel || !message) {
-    res.status(400).json({ error: "Missing required parameters." });
-    return;
-  }
-
-  
-  const phoneNumber = parsePhoneNumberFromString(tel, "TH");
-
-  if (!phoneNumber) {
-    res.status(400).json({ error: "Invalid phone number." });
-    return;
-  }
-
   try {
+
+    let data : any = decryptData(req.body.data);
+    const {
+      tel,
+      message
+    } = data
+  
+  
+    if (!tel || !message) {
+      res.status(400).json({ error: "Missing required parameters." });
+      return;
+    }
+  
+    
+    const phoneNumber = parsePhoneNumberFromString(tel, "TH");
+  
+    if (!phoneNumber) {
+      res.status(400).json({ error: "Invalid phone number." });
+      return;
+    }
+
     const dataSent: {
       msisdn: string;
       message: string;
