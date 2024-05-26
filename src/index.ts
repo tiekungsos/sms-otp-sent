@@ -7,23 +7,20 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
+const sender_sms = [
+  'Bargain',  
+  'Live SMS',
+  'CPTW',
+  'LUNAMKT',
+  'MOREISE',
+  'PR SMS',
+  'Flash sale',
+  'Act now',
+  'LUCA'
+]
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }))
-
-// app.post("/encrypt-data", async (req: Request, res: Response) => {
-
-//   console.log(req.body);
-
-
-//   console.log(encryptData(req.body.data));
-  
-
-  
-//   res.status(200).json({ status : true});
-
-//   return 
-// })
 
 app.post("/check-otp", async (req: Request, res: Response) => {
 
@@ -173,6 +170,10 @@ app.post("/send-otp", async (req: Request, res: Response) => {
 });
 
 app.post("/send-otp-normal", async (req: Request, res: Response) => {
+
+  // console.log(encryptData(req.body.data));
+  // return
+
   if(!req.body.data) {
     res.status(400).json({ error: "Not found data" });
     return;
@@ -190,7 +191,6 @@ app.post("/send-otp-normal", async (req: Request, res: Response) => {
       res.status(400).json({ error: "Missing required parameters." });
       return;
     }
-  
     
     const phoneNumber = parsePhoneNumberFromString(tel, "TH");
   
@@ -199,47 +199,63 @@ app.post("/send-otp-normal", async (req: Request, res: Response) => {
       return;
     }
 
-    const dataSent: {
-      msisdn: string;
-      message: string;
-      sender: string;
-    } = {
-      msisdn: tel,
-      message: message,
-      sender: "wourchon",
-    };
 
-    // Encode the credentials in Base64 format
-    const credentials = `${process.env.SMS_API_KEY}:${process.env.SMS_API_SECRET}`;
-    const encodedCredentials = btoa(credentials);
-
-    // Create the authentication header
-    const authHeader = `Basic ${encodedCredentials}`;
-
-    const encodedData = new URLSearchParams(dataSent).toString();
-
-    const apiData: any = await axios
-    .post("https://api-v2.thaibulksms.com/sms", encodedData, {
-      headers: {
-        Authorization: authHeader,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    })
-      .then((data: any) => {
-        console.log('thaibulksms data',data);
-        return data.data
+    if(process.env.OTP_TYPE == 'thaibulk') {
+      const dataSent: {
+        msisdn: string;
+        message: string;
+        sender: string;
+      } = {
+        msisdn: tel,
+        message: message,
+        sender: "wourchon",
+      };
+  
+      // Encode the credentials in Base64 format
+      const credentials = `${process.env.SMS_API_KEY}:${process.env.SMS_API_SECRET}`;
+      const encodedCredentials = btoa(credentials);
+  
+      // Create the authentication header
+      const authHeader = `Basic ${encodedCredentials}`;
+  
+      const encodedData = new URLSearchParams(dataSent).toString();
+  
+      const apiData: any = await axios
+      .post("https://api-v2.thaibulksms.com/sms", encodedData, {
+        headers: {
+          Authorization: authHeader,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
       })
-      .catch((err) => {
-        console.log("err", err.response.data);
-        return {
-          code: err.response.data.code,
-          statusText: err.response.statusText,
-          message: err.response.data.errors[0],
-      }
-      });
+        .then((data: any) => {
+          console.log('thaibulksms data',data);
+          return data.data
+        })
+        .catch((err) => {
+          console.log("err", err.response.data);
+          return {
+            code: err.response.data.code,
+            statusText: err.response.statusText,
+            message: err.response.data.errors[0],
+        }
+        });
 
+        res.status(200).json(apiData);
+        return
 
-    res.status(200).json(apiData);
+    } else if(process.env.OTP_TYPE == 'thsms') {
+
+        const apiData = await senthaisms(tel,message)
+      
+
+        res.status(200).json(apiData);
+        return
+    }
+    
+ 
+    res.status(400).json('noe fount sms sent');
+    return
+  
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to send OTP." });
@@ -249,6 +265,106 @@ app.post("/send-otp-normal", async (req: Request, res: Response) => {
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
+
+async function senthaisms(tel : string,message : string, number_sender : number = 0) {
+
+
+  if(!sender_sms[number_sender]) {
+    return {
+      code: 0,
+      statusText:'false sent sms',
+      message: 'not have sender to sent sms',
+  }
+  }
+
+  const dataSent: {
+    msisdn: string[];
+    message: string;
+    sender: string;
+  } = {
+    msisdn:[tel],
+    message: message,
+    sender: sender_sms[number_sender],
+  };
+
+  // Encode the credentials in Base64 format
+  const credentials = `${process.env.SMS_API_KEY}`;
+
+  // Create the authentication header
+  const authHeader = `Bearer ${credentials}`;
+  const apiData: any = await axios
+  .post("https://thsms.com/api/send-sms",dataSent , {
+    headers: {
+      Authorization: authHeader,
+      "Content-Type": "application/json",
+    },
+  })
+    .then(async (data: any)  => {
+      console.log('thsms data',data.data);
+
+      await delay(2000);
+
+      const checkCreadit = await checkCreditThsms(data.data.data.remaining_credit);
+
+      console.log('checkCreadit',checkCreadit);
+
+      if(checkCreadit.credit == data.data.data.remaining_credit) {
+        console.log('success sent sms');
+        
+        return data.data
+      } else {
+        await senthaisms(tel,message,number_sender + 1)
+      }
+
+    })
+    .catch((err) => {
+      console.log("err", err.response.data);
+      return {
+        code: err.response.data.code,
+        statusText: err.response.statusText,
+        message: err.response.data,
+    }
+    });
+
+    return apiData
+}
+
+async function checkCreditThsms (last_creadit: any) {
+
+  // Encode the credentials in Base64 format
+  const credentials = `${process.env.SMS_API_KEY}`;
+
+  // Create the authentication header
+  const authHeader = `Bearer ${credentials}`;
+
+  const apiData: any = await axios
+  .get("https://thsms.com/api/me" , {
+    headers: {
+      Authorization: authHeader,
+      "Content-Type": "application/json",
+    },
+  })
+    .then((data: any) => {
+      console.log('thsms data',data.data);
+      return data.data.data.wallet
+    })
+    .catch((err) => {
+      console.log("err", err.response.data);
+      return {
+        code: err.response.data.code,
+        statusText: err.response.statusText,
+        message: err.response.data.errors[0],
+    }
+    });
+
+    return apiData
+}
+
+async function delay(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 
 // Function to encrypt JSON data
 function encryptData(data: any): string {
