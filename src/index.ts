@@ -8,6 +8,9 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 const sender_sms = [
+  'Online SMS',
+  'E-Marketing',
+  'Co-Branding',
   'Bargain',  
   'Live SMS',
   'CPTW',
@@ -17,10 +20,7 @@ const sender_sms = [
   'Flash sale',
   'Act now',
   'LUCA',
-  'Co-Branding',
-  'E-Marketing',
   'Happy Hour',
-  'Online SMS',
   'Retail',
   'Target SMS',
   'Direct SMS'
