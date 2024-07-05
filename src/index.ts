@@ -16,7 +16,14 @@ const sender_sms = [
   'PR SMS',
   'Flash sale',
   'Act now',
-  'LUCA'
+  'LUCA',
+  'Co-Branding',
+  'E-Marketing',
+  'Happy Hour',
+  'Online SMS',
+  'Retail',
+  'Target SMS',
+  'Direct SMS'
 ]
 
 app.use(express.json());
